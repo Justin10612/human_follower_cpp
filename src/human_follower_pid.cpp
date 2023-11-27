@@ -3,6 +3,7 @@
 #include <memory>
 #include <string>
 #include <ctime>
+#include <cmath>
 
 #include "rclcpp/rclcpp.hpp"
 #include "std_msgs/msg/string.hpp"
@@ -18,17 +19,17 @@ using namespace std::chrono_literals;
 /* Depth Distance Constant */
 const double MAX_CHASE_DISTANCE = 3.0;    // Unit:meter
 const double MIN_CHASE_DISTANCE = 0.8;    // Unit:meter
-const double MIN_SKID_DISTANCE = 0.5;
+// const double MIN_SKID_DISTANCE = 0.5;
 const double MAX_LINEAR_VEL_OUTPUT = 1.5;
 /* Angle constant */
 const double MAX_ANGULER_VEL_OUTPUT = 2; 
 /* Depth pid controller */
-const double DEPTH_kp = 2.0;
-const double DEPTH_kd = 0.5;
+const double DEPTH_kp = 1.6;
+const double DEPTH_kd = 1.2;
 double depth_error1 = 0;
 /* Angle pid controller */
-const double ANGLE_kp = 0.5;
-const double ANGLE_kd = 0.25;
+const double ANGLE_kp = 2.32;
+const double ANGLE_kd = 5.64;
 double angle_error1 = 0;
 // Veriable
 double target_angle = 0.0;
@@ -69,35 +70,32 @@ class HumanFollowerPID : public rclcpp::Node
 
         /* Follow mode */
         if(mode=="FOLLOW" && target_state==1.0){
+            follow_flag = true;
+            // RCLCPP_INFO(this->get_logger(), "Following");
             /* Error cal */
             double depth_error = target_depth - MIN_CHASE_DISTANCE;
             double angle_error = 0.0-target_angle;
+            if(fabs(angle_error)<0.3) angle_error=0;
             /* ZONE Detect */
             if(target_depth > MAX_CHASE_DISTANCE){
                 /* STOP ZONE */
                 cmd_vel_msgs.linear.x = 0.0;
                 cmd_vel_msgs.angular.z = 0.0;
             }else{
-                if(target_depth > MIN_SKID_DISTANCE && target_depth < MIN_CHASE_DISTANCE){
-                    /* SKID ZONE */
-                    cmd_vel_msgs.linear.x = 0.0;
-                    cmd_vel_msgs.angular.z = PD_Controller(
-                        angle_error, angle_error1, MAX_ANGULER_VEL_OUTPUT, ANGLE_kp, ANGLE_kd
-                    );
-                }else{
-                    /* CHASING ZONE */
-                    cmd_vel_msgs.linear.x = PD_Controller(
-                        depth_error, depth_error1, MAX_LINEAR_VEL_OUTPUT, DEPTH_kp, DEPTH_kd
-                    );
-                    cmd_vel_msgs.angular.z = PD_Controller(
-                        angle_error, angle_error1, MAX_ANGULER_VEL_OUTPUT, ANGLE_kp, ANGLE_kd
-                    );
-                }
+                /* CHASING ZONE */
+                cmd_vel_msgs.linear.x = PD_Controller(
+                    depth_error, depth_error1, MAX_LINEAR_VEL_OUTPUT, DEPTH_kp, DEPTH_kd
+                );
+                cmd_vel_msgs.angular.z = PD_Controller(
+                    angle_error, angle_error1, MAX_ANGULER_VEL_OUTPUT, ANGLE_kp, ANGLE_kd
+                );
             }
             /* LAST ERROR */
             depth_error1 = depth_error;
             angle_error1 = angle_error;
+            follow_vel_pub_->publish(cmd_vel_msgs);
         }else{
+            // RCLCPP_INFO(this->get_logger(), "Lost target, zero output");
             // Clean Output
             cmd_vel_msgs.linear.x = 0.0;
             cmd_vel_msgs.angular.z = 0.0;
@@ -113,7 +111,7 @@ class HumanFollowerPID : public rclcpp::Node
     {
         double target_x = target_msgs->x;
         target_angle = (target_x-640)*0.001225; // Change pixel to radian 0.001225 = (45/640)*(pi/180)
-        target_depth = target_msgs->y;
+        target_depth = (target_msgs->y);
         target_state = target_msgs->z;
     }
 };
