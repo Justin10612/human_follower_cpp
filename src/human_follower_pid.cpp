@@ -38,6 +38,9 @@ double target_depth = 0.0;
 double target_state = 0.0;
 bool follow_flag = false;
 
+// Decent factor for slow down
+const double decent_factor = 0.25;
+
 double depth_error=0.0;
 double angle_error=0.0; 
 
@@ -104,7 +107,10 @@ class HumanFollowerPID : public rclcpp::Node
                 follow_vel_pub_->publish(cmd_vel_msgs);
             }else{
                 depth_error=0;
-                angle_error=0;  
+                angle_error=0;
+                cmd_vel_msgs.linear.x *= decent_factor;
+                cmd_vel_msgs.angular.z *= decent_factor;
+                follow_vel_pub_->publish(cmd_vel_msgs);
             }
         }else{
             // RCLCPP_INFO(this->get_logger(), "Lost target, zero output");
