@@ -26,7 +26,7 @@ const double MAX_LINEAR_VEL_OUTPUT = 1.5;
 const double MAX_ANGULER_VEL_OUTPUT = 2; 
 /* Depth pid controller */
 const double DEPTH_kp = 1.2;
-const double DEPTH_kd = 1.2;
+const double DEPTH_kd =  0.6;
 double depth_error1 = 0;
 /* Angle pid controller */
 const double ANGLE_kp = 2.32;
@@ -106,8 +106,8 @@ class HumanFollowerPID : public rclcpp::Node
                 angle_error1 = angle_error;
                 follow_vel_pub_->publish(cmd_vel_msgs);
             }else{
-                depth_error=0;
-                angle_error=0;
+                // depth_error=0;
+                // angle_error=0;
                 cmd_vel_msgs.linear.x *= decent_factor;
                 cmd_vel_msgs.angular.z *= decent_factor;
                 follow_vel_pub_->publish(cmd_vel_msgs);
