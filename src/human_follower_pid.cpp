@@ -39,7 +39,7 @@ double target_state = 0.0;
 bool follow_flag = false;
 
 // Decent factor for slow down
-const double decent_factor = 0.25;
+const double decent_factor = 0.56;
 
 double depth_error=0.0;
 double angle_error=0.0; 
