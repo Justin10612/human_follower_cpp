@@ -26,7 +26,7 @@ const double MAX_LINEAR_VEL_OUTPUT = 1.5;
 const double MAX_ANGULER_VEL_OUTPUT = 2; 
 /* Depth pid controller */
 const double DEPTH_kp = 1.2;
-const double DEPTH_kd =  0.6;
+const double DEPTH_kd =  0.85;
 double depth_error1 = 0;
 /* Angle pid controller */
 const double ANGLE_kp = 2.32;
@@ -37,14 +37,18 @@ double target_angle = 0.0;
 double target_depth = 0.0;
 double target_state = 0.0;
 bool follow_flag = false;
-
 // Decent factor for slow down
 const double decent_factor = 0.56;
+
+const int num_samples = 3;  // 設定移動平均的樣本數
+double distance_samples[num_samples];  // 保存前 n 次的距離值
+
 
 double depth_error=0.0;
 double angle_error=0.0; 
 
 double PD_Controller(double error, double error1, double max, double kp, double kd);
+double updateDistance(double new_distance);
 
 class HumanFollowerPID : public rclcpp::Node
 {
@@ -59,7 +63,7 @@ class HumanFollowerPID : public rclcpp::Node
         human_pose_sub_ = this->create_subscription<geometry_msgs::msg::Vector3>(
             "human_pose", 10, std::bind(&HumanFollowerPID::human_pose_callback, this, std::placeholders::_1));
         depth_sub_ = this->create_subscription<std_msgs::msg::Float64>(
-            "depth", 10, std::bind(&HumanFollowerPID::depth_callback, this, std::placeholders::_1));
+            "depth_raw", 10, std::bind(&HumanFollowerPID::depth_callback, this, std::placeholders::_1));
     }
 
   private:
@@ -69,7 +73,6 @@ class HumanFollowerPID : public rclcpp::Node
     rclcpp::Subscription<std_msgs::msg::String>::SharedPtr robot_mode_sub;
     rclcpp::Subscription<geometry_msgs::msg::Vector3>::SharedPtr human_pose_sub_;
     rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr depth_sub_;
-    
 
     void mode_callback(const std_msgs::msg::String::SharedPtr mode_msgs) const
     {
@@ -85,7 +88,7 @@ class HumanFollowerPID : public rclcpp::Node
                 /* Error cal */
                 depth_error = target_depth - MIN_CHASE_DISTANCE;
                 angle_error = 0.0-target_angle;
-                if(fabs(angle_error)<0.3) angle_error=0;
+                if(fabs(angle_error)<0.2) angle_error=0;
                 /* ZONE Detect */
                 if(target_depth > MAX_CHASE_DISTANCE){
                     /* STOP ZONE */
@@ -127,6 +130,7 @@ class HumanFollowerPID : public rclcpp::Node
         }
     }
 
+    /* Get the human_pose from topic */
     void human_pose_callback(const geometry_msgs::msg::Vector3::SharedPtr target_msgs) const
     {
         double target_x = target_msgs->x;
@@ -137,7 +141,7 @@ class HumanFollowerPID : public rclcpp::Node
 
     void depth_callback(const std_msgs::msg::Float64::SharedPtr depth_msg) const
     {
-        target_depth = float(depth_msg->data);
+        target_depth = updateDistance(double(depth_msg->data));
     }
 };
 
@@ -146,6 +150,22 @@ double PD_Controller(double error, double error1, double max, double kp, double 
         if (output > max) output = max;
         if (output < -max) output = -max;
         return output;
+}
+
+// 在每次讀取距離的時候執行
+double updateDistance(double new_distance) {
+    // 將新的距離值存入陣列
+    for (int i = num_samples - 1; i > 0; --i) {
+        distance_samples[i] = distance_samples[i - 1];
+    }
+    distance_samples[0] = new_distance;
+
+    // 計算移動平均
+    double moving_average = 0.0;
+    for (int i = 0; i < num_samples; ++i) {
+        moving_average += distance_samples[i];
+    }
+    return moving_average/num_samples;
 }
 
 int main(int argc, char * argv[])
