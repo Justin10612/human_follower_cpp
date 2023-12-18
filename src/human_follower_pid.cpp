@@ -18,12 +18,12 @@ using namespace std::chrono_literals;
 * member function as a callback from the timer. */
 
 /* Depth Distance Constant */
-const double MAX_CHASE_DISTANCE = 3.0;    // Unit:meter
-const double MIN_CHASE_DISTANCE = 0.8;    // Unit:meter
+const double kMAX_CHASE_DISTANCE = 2.0;    // Unit:meter
+const double kMIN_CHASE_DISTANCE = 0.8;    // Unit:meter
 // const double MIN_SKID_DISTANCE = 0.5;
-const double MAX_LINEAR_VEL_OUTPUT = 1.5;
+const double kMAX_LINEAR_VEL_OUTPUT = 1.5;
 /* Angle constant */
-const double MAX_ANGULER_VEL_OUTPUT = 2; 
+const double kMAX_ANGULER_VEL_OUTPUT = 2; 
 /* Depth pid controller */
 const double DEPTH_kp = 1.2;
 const double DEPTH_kd =  0.85;
@@ -43,12 +43,13 @@ const double decent_factor = 0.56;
 const int num_samples = 3;  // 設定移動平均的樣本數
 double distance_samples[num_samples];  // 保存前 n 次的距離值
 
-
 double depth_error=0.0;
 double angle_error=0.0; 
 
+double target_angle1 = 0;
+double target_depth = 0;
+
 double PD_Controller(double error, double error1, double max, double kp, double kd);
-double updateDistance(double new_distance);
 
 class HumanFollowerPID : public rclcpp::Node
 {
@@ -84,37 +85,30 @@ class HumanFollowerPID : public rclcpp::Node
         if(mode=="FOLLOW"){
             follow_flag = true;
             // RCLCPP_INFO(this->get_logger(), "Following");
-            if(target_state == 1.0){
-                /* Error cal */
-                depth_error = target_depth - MIN_CHASE_DISTANCE;
-                angle_error = 0.0-target_angle;
-                if(fabs(angle_error)<0.2) angle_error=0;
-                /* ZONE Detect */
-                if(target_depth > MAX_CHASE_DISTANCE){
-                    /* STOP ZONE */
-                    cmd_vel_msgs.linear.x = 0.0;
-                    cmd_vel_msgs.angular.z = 0.0;
-                }else{
-                    /* CHASING ZONE */
-                    cmd_vel_msgs.linear.x = PD_Controller(
-                        depth_error, depth_error1, MAX_LINEAR_VEL_OUTPUT, DEPTH_kp, DEPTH_kd
-                    );
-                    // RCLCPP_INFO(this->get_logger(), "Output = %f", depth_error);
-                    cmd_vel_msgs.angular.z = PD_Controller(
-                        angle_error, angle_error1, MAX_ANGULER_VEL_OUTPUT, ANGLE_kp, ANGLE_kd
-                    );
-                }   
-                /* LAST ERROR */
-                depth_error1 = depth_error;
-                angle_error1 = angle_error;
-                follow_vel_pub_->publish(cmd_vel_msgs);
+            /* Error cal */
+            depth_error = target_depth - kMIN_CHASE_DISTANCE;
+            angle_error = -target_angle;
+            // Depth zone
+            if(fabs(angle_error)<0.2) angle_error=0;
+            /* ZONE Detect */
+            if(target_depth > kMAX_CHASE_DISTANCE){
+                /* STOP ZONE */
+                cmd_vel_msgs.linear.x = 0.0;
+                cmd_vel_msgs.angular.z = 0.0;
             }else{
-                // depth_error=0;
-                // angle_error=0;
-                cmd_vel_msgs.linear.x *= decent_factor;
-                cmd_vel_msgs.angular.z *= decent_factor;
-                follow_vel_pub_->publish(cmd_vel_msgs);
-            }
+                /* CHASING ZONE */
+                cmd_vel_msgs.linear.x = PD_Controller(
+                    depth_error, depth_error1, kMAX_LINEAR_VEL_OUTPUT, DEPTH_kp, DEPTH_kd
+                );
+                cmd_vel_msgs.angular.z = PD_Controller(
+                    angle_error, angle_error1, kMAX_ANGULER_VEL_OUTPUT, ANGLE_kp, ANGLE_kd
+                );
+            }   
+            /* LAST ERROR */
+            depth_error1 = depth_error;
+            angle_error1 = angle_error;
+            /* Publish cmd_vel */
+            follow_vel_pub_->publish(cmd_vel_msgs);
         }else{
             // RCLCPP_INFO(this->get_logger(), "Lost target, zero output");
             depth_error=0;
@@ -134,14 +128,18 @@ class HumanFollowerPID : public rclcpp::Node
     void human_pose_callback(const geometry_msgs::msg::Vector3::SharedPtr target_msgs) const
     {
         double target_x = target_msgs->x;
-        target_angle = (target_x-640)*0.001225; // Change pixel to radian 0.001225 = (45/640)*(pi/180)
-        // target_depth = (target_msgs->y);
-        target_state = target_msgs->z;
+        double target_y = target_msgs->y;
+        double target_state = target_msgs->z;
+        // IF we got the target then update the target pos.
+        if (target_state == 1.0){
+            target_angle = (target_x-640)*0.001225; // Change pixel to radian 0.001225 = (45/640)*(pi/180)
+            target_depth = std::max(0.0, std::min(2.0, target_y));
+        }        
     }
 
     void depth_callback(const std_msgs::msg::Float64::SharedPtr depth_msg) const
     {
-        target_depth = updateDistance(double(depth_msg->data));
+        // target_depth = double(depth_msg->data);
     }
 };
 
@@ -150,22 +148,6 @@ double PD_Controller(double error, double error1, double max, double kp, double 
         if (output > max) output = max;
         if (output < -max) output = -max;
         return output;
-}
-
-// 在每次讀取距離的時候執行
-double updateDistance(double new_distance) {
-    // 將新的距離值存入陣列
-    for (int i = num_samples - 1; i > 0; --i) {
-        distance_samples[i] = distance_samples[i - 1];
-    }
-    distance_samples[0] = new_distance;
-
-    // 計算移動平均
-    double moving_average = 0.0;
-    for (int i = 0; i < num_samples; ++i) {
-        moving_average += distance_samples[i];
-    }
-    return moving_average/num_samples;
 }
 
 int main(int argc, char * argv[])
