@@ -47,7 +47,7 @@ double depth_error=0.0;
 double angle_error=0.0; 
 
 double target_angle1 = 0;
-double target_depth = 0;
+double target_depth1 = 0;
 
 double PD_Controller(double error, double error1, double max, double kp, double kd);
 
@@ -84,12 +84,15 @@ class HumanFollowerPID : public rclcpp::Node
         /* Follow mode */
         if(mode=="FOLLOW"){
             follow_flag = true;
-            // RCLCPP_INFO(this->get_logger(), "Following");
             /* Error cal */
-            depth_error = target_depth - kMIN_CHASE_DISTANCE;
-            angle_error = -target_angle;
-            // Depth zone
-            if(fabs(angle_error)<0.2) angle_error=0;
+            if(target_state==1.00){
+                depth_error = target_depth - kMIN_CHASE_DISTANCE;
+                angle_error = -target_angle;
+                if(fabs(angle_error)<0.2) angle_error=0;
+            }else{
+                depth_error*=0.05;
+                angle_error*=0.05;
+            }
             /* ZONE Detect */
             if(target_depth > kMAX_CHASE_DISTANCE){
                 /* STOP ZONE */
@@ -100,9 +103,9 @@ class HumanFollowerPID : public rclcpp::Node
                 cmd_vel_msgs.linear.x = PD_Controller(
                     depth_error, depth_error1, kMAX_LINEAR_VEL_OUTPUT, DEPTH_kp, DEPTH_kd
                 );
-                cmd_vel_msgs.angular.z = PD_Controller(
-                    angle_error, angle_error1, kMAX_ANGULER_VEL_OUTPUT, ANGLE_kp, ANGLE_kd
-                );
+                // cmd_vel_msgs.angular.z = PD_Controller(
+                //     angle_error, angle_error1, kMAX_ANGULER_VEL_OUTPUT, ANGLE_kp, ANGLE_kd
+                // );
             }   
             /* LAST ERROR */
             depth_error1 = depth_error;
@@ -129,12 +132,10 @@ class HumanFollowerPID : public rclcpp::Node
     {
         double target_x = target_msgs->x;
         double target_y = target_msgs->y;
-        double target_state = target_msgs->z;
+        target_state = target_msgs->z;
         // IF we got the target then update the target pos.
-        if (target_state == 1.0){
-            target_angle = (target_x-640)*0.001225; // Change pixel to radian 0.001225 = (45/640)*(pi/180)
-            target_depth = std::max(0.0, std::min(2.0, target_y));
-        }        
+        target_angle = (target_x-640)*0.001225; // Change pixel to radian 0.001225 = (45/640)*(pi/180)
+        target_depth = std::max(0.0, std::min(2.0, target_y));
     }
 
     void depth_callback(const std_msgs::msg::Float64::SharedPtr depth_msg) const
