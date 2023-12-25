@@ -63,8 +63,6 @@ class HumanFollowerPID : public rclcpp::Node
             "robot_mode", 10, std::bind(&HumanFollowerPID::mode_callback, this, std::placeholders::_1));
         human_pose_sub_ = this->create_subscription<geometry_msgs::msg::Vector3>(
             "human_pose", 10, std::bind(&HumanFollowerPID::human_pose_callback, this, std::placeholders::_1));
-        depth_sub_ = this->create_subscription<std_msgs::msg::Float64>(
-            "depth_raw", 10, std::bind(&HumanFollowerPID::depth_callback, this, std::placeholders::_1));
     }
 
   private:
@@ -73,7 +71,6 @@ class HumanFollowerPID : public rclcpp::Node
     // Subscriber
     rclcpp::Subscription<std_msgs::msg::String>::SharedPtr robot_mode_sub;
     rclcpp::Subscription<geometry_msgs::msg::Vector3>::SharedPtr human_pose_sub_;
-    rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr depth_sub_;
 
     void mode_callback(const std_msgs::msg::String::SharedPtr mode_msgs) const
     {
@@ -135,12 +132,7 @@ class HumanFollowerPID : public rclcpp::Node
         target_state = target_msgs->z;
         // IF we got the target then update the target pos.
         target_angle = (target_x-640)*0.001225; // Change pixel to radian 0.001225 = (45/640)*(pi/180)
-        // target_depth = std::max(0.0, std::min(2.0, target_y));
-    }
-
-    void depth_callback(const geometry_msgs::msg::PoseStamped::SharedPtr pose_msg) const
-    {
-        target_depth = double(pose_msg->pose.position.x);
+        target_depth = std::max(0.0, std::min(2.0, target_y));
     }
 };
 
