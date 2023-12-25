@@ -87,7 +87,7 @@ class HumanFollowerPID : public rclcpp::Node
                 angle_error = -target_angle;
                 if(fabs(angle_error)<0.2) angle_error=0;
             }else{
-                depth_error*=0.05;
+                depth_error*=0.95;
                 angle_error*=0.05;
             }
             /* ZONE Detect */
@@ -100,9 +100,9 @@ class HumanFollowerPID : public rclcpp::Node
                 cmd_vel_msgs.linear.x = PD_Controller(
                     depth_error, depth_error1, kMAX_LINEAR_VEL_OUTPUT, DEPTH_kp, DEPTH_kd
                 );
-                // cmd_vel_msgs.angular.z = PD_Controller(
-                //     angle_error, angle_error1, kMAX_ANGULER_VEL_OUTPUT, ANGLE_kp, ANGLE_kd
-                // );
+                cmd_vel_msgs.angular.z = PD_Controller(
+                    angle_error, angle_error1, kMAX_ANGULER_VEL_OUTPUT, ANGLE_kp, ANGLE_kd
+                );
             }   
             /* LAST ERROR */
             depth_error1 = depth_error;
