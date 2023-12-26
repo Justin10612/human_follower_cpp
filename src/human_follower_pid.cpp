@@ -25,11 +25,11 @@ const double kMAX_LINEAR_VEL_OUTPUT = 1.5;
 /* Angle constant */
 const double kMAX_ANGULER_VEL_OUTPUT = 2; 
 /* Depth pid controller */
-const double DEPTH_kp = 1.2;
-const double DEPTH_kd =  0.85;
+const double DEPTH_kp = 1.3;
+const double DEPTH_kd =  0.65;
 double depth_error1 = 0;
 /* Angle pid controller */
-const double ANGLE_kp = 2.32;
+const double ANGLE_kp = 2.52;
 const double ANGLE_kd = 5.64;
 double angle_error1 = 0;
 // Veriable
@@ -133,6 +133,7 @@ class HumanFollowerPID : public rclcpp::Node
         // IF we got the target then update the target pos.
         target_angle = (target_x-640)*0.001225; // Change pixel to radian 0.001225 = (45/640)*(pi/180)
         target_depth = std::max(0.0, std::min(2.0, target_y));
+        target_depth1 = target_depth;
     }
 };
 
