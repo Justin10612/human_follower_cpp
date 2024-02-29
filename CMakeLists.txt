@@ -35,10 +35,13 @@ if(BUILD_TESTING)
 endif()
 
 add_executable(human_follower_pid src/human_follower_pid.cpp)
+add_executable(human_follower_uwb src/human_follower_uwb.cpp)
 ament_target_dependencies(human_follower_pid rclcpp geometry_msgs)
+ament_target_dependencies(human_follower_uwb rclcpp geometry_msgs )
 
 install(TARGETS
   human_follower_pid
+  human_follower_uwb
   DESTINATION lib/${PROJECT_NAME})
 
 ament_package()

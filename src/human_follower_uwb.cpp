@@ -51,18 +51,18 @@ double target_depth1 = 0;
 
 double PD_Controller(double error, double error1, double max, double kp, double kd);
 
-class HumanFollowerPID : public rclcpp::Node
+class HumanFollowerUWB : public rclcpp::Node
 {
   public:
-    HumanFollowerPID():Node("human_follower_pid")
+    HumanFollowerUWB():Node("human_follower_uwb")
     {
         // Create Publisher
         follow_vel_pub_ = this->create_publisher<geometry_msgs::msg::Twist>("follow_cmd_vel", 10);
         // Create Subscriber
         robot_mode_sub = this->create_subscription<std_msgs::msg::String>(
-            "robot_mode", 10, std::bind(&HumanFollowerPID::mode_callback, this, std::placeholders::_1));
+            "robot_mode", 10, std::bind(&HumanFollowerUWB::mode_callback, this, std::placeholders::_1));
         human_pose_sub_ = this->create_subscription<geometry_msgs::msg::Vector3>(
-            "human_pose", 10, std::bind(&HumanFollowerPID::human_pose_callback, this, std::placeholders::_1));
+            "human_pose", 10, std::bind(&HumanFollowerUWB::human_pose_callback, this, std::placeholders::_1));
     }
 
   private:
@@ -147,7 +147,7 @@ double PD_Controller(double error, double error1, double max, double kp, double 
 int main(int argc, char * argv[])
 {
   rclcpp::init(argc, argv);
-  rclcpp::spin(std::make_shared<HumanFollowerPID>());
+  rclcpp::spin(std::make_shared<HumanFollowerUWB>());
   rclcpp::shutdown();
   return 0;
 }
