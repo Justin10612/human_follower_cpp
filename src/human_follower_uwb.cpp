@@ -14,13 +14,13 @@ using namespace std::chrono_literals;
 
 /* Max Min Distance */
 const double kMAX_CHASE_DISTANCE = 3.0; 
-const double kMIN_CHASE_DISTANCE = 1.6; 
+const double kMIN_CHASE_DISTANCE = 1.0; 
 /* Speed Output limit */
-const double kMAX_LINEAR_VEL_OUTPUT = 1.2;
+const double kMAX_LINEAR_VEL_OUTPUT = 0.5;
 const double kMAX_ANGULER_VEL_OUTPUT = 1.5; 
 /* Depth pid controller */
 const double DEPTH_kp = 1.2;
-const double DEPTH_kd =  0.6;
+const double DEPTH_kd =  1.0;
 double depth_error1 = 0;
 /* Angle pid controller */
 const double ANGLE_kp = 0;
@@ -71,7 +71,7 @@ class HumanFollowerUWB : public rclcpp::Node
         depth_error = target_depth - kMIN_CHASE_DISTANCE;
         angle_error = -target_angle;
         // RCLCPP_INFO(this->get_logger(), "Error : %.2f", depth_error);
-        if(fabs(depth_error)<0.03) depth_error=0;
+        if(fabs(depth_error)<0.1) depth_error=0;
         if(fabs(angle_error)<3) angle_error=0;
         /* ZONE Detect */
         if(target_depth > kMAX_CHASE_DISTANCE){
