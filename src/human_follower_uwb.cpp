@@ -16,15 +16,16 @@ using namespace std::chrono_literals;
 const double kMAX_CHASE_DISTANCE = 3.0; 
 const double kMIN_CHASE_DISTANCE = 1.0; 
 /* Speed Output limit */
-const double kMAX_LINEAR_VEL_OUTPUT = 0.5;
-const double kMAX_ANGULER_VEL_OUTPUT = 1.5; 
+const double kMAX_LINEAR_VEL_OUTPUT = 0.55;
+const double kMAX_ANGULER_VEL_OUTPUT = 0.9; 
 /* Depth pid controller */
-const double DEPTH_kp = 1.2;
-const double DEPTH_kd =  1.0;
+// 1.2 _ 1.5
+const double DEPTH_kp = 0;
+const double DEPTH_kd =  0;
 double depth_error1 = 0;
 /* Angle pid controller */
-const double ANGLE_kp = 0;
-const double ANGLE_kd = 0;
+const double ANGLE_kp = 0.005;
+const double ANGLE_kd = 0.012;
 double angle_error1 = 0;
 // Veriable
 double target_angle = 0.0;
@@ -72,7 +73,7 @@ class HumanFollowerUWB : public rclcpp::Node
         angle_error = -target_angle;
         // RCLCPP_INFO(this->get_logger(), "Error : %.2f", depth_error);
         if(fabs(depth_error)<0.1) depth_error=0;
-        if(fabs(angle_error)<3) angle_error=0;
+        if(fabs(angle_error)<10) angle_error=0;
         /* ZONE Detect */
         if(target_depth > kMAX_CHASE_DISTANCE){
             /* STOP ZONE */
@@ -114,7 +115,7 @@ class HumanFollowerUWB : public rclcpp::Node
 };
 
 double pd_controller(double error, double error1, double max, double kp, double kd){
-  double output = kp*error + kd*(error-error1);
+  double output = kp*error + kd*((error-error1)/0.633);
   if (output > max) output = max;
   if (output < -max) output = -max;
   return output;
